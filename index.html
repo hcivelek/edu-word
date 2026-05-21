@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kelime Silüeti Oluşturucu</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --paper: #ffffff;
+      --bg: #f3f4f6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      min-height: 100vh;
+    }
+
+    .panel {
+      padding: 20px;
+      background: #fff;
+      border-right: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .panel h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    .panel p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.35;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      font-weight: 650;
+      font-size: 13px;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .input-block.hidden {
+      display: none;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .check input { width: auto; }
+
+    button {
+      width: 100%;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #111827;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+      margin-top: 8px;
+    }
+
+    .preview-wrap {
+      padding: 28px;
+      overflow: auto;
+    }
+
+    .preview-stage {
+      width: 210mm;
+      margin: 0 auto;
+    }
+
+    .preview-card {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(0,0,0,.12);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .preview-head {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+
+    .pdf-preview {
+      width: 100%;
+      height: calc(297mm + 44px);
+      border: 0;
+      display: block;
+      background: #fff;
+    }
+
+    .paper {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: var(--paper);
+      box-shadow: 0 12px 30px rgba(0,0,0,.12);
+      padding: 16mm 14mm;
+    }
+
+    .worksheet-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 8mm;
+      font-size: 14px;
+    }
+
+    .worksheet-topic {
+      text-align: right;
+      margin-left: auto;
+    }
+
+    .name-line {
+      min-width: 62mm;
+      border-bottom: 1px solid #9ca3af;
+      height: 20px;
+    }
+
+    .item {
+      margin: 0;
+      break-inside: avoid;
+    }
+
+    .items-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6mm 8mm;
+      align-items: start;
+    }
+
+    .sentence-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 5mm;
+    }
+
+    .sentence-item {
+      break-inside: avoid;
+    }
+
+    .sentence-label {
+      font-size: 18px;
+      color: #111827;
+      margin-bottom: 1.4mm;
+      letter-spacing: .01em;
+    }
+
+    .sentence-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 1.8mm;
+      break-inside: avoid;
+    }
+
+    .word-label {
+      font-size: 19px;
+      letter-spacing: .02em;
+      margin-bottom: 1.4mm;
+      color: #111827;
+    }
+
+    svg {
+      width: auto;
+      height: auto;
+      display: inline-block;
+      overflow: visible;
+      vertical-align: top;
+    }
+
+    .guide { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+    .baseline { stroke: #9ca3af; stroke-width: 1.2; }
+    .silhouette { fill: #ffffff; stroke: #111827; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .letter-cut { stroke: #e5e7eb; stroke-width: 1; }
+    .faint-text { fill: #9ca3af; font-size: 14px; }
+
+    @media print {
+      body { background: #fff; }
+      .panel { display: none; }
+      .app { display: block; }
+      .preview-wrap { padding: 0; }
+      .preview-stage {
+        width: auto;
+      }
+      .preview-card {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+      .preview-head { display: none; }
+      .pdf-preview {
+        width: 100%;
+        height: 100vh;
+      }
+      .paper {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        box-shadow: none;
+        padding: 12mm 12mm;
+      }
+      @page { size: A4 portrait; margin: 0; }
+    }
+
+    @media (max-width: 1024px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        position: static;
+        top: auto;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .preview-wrap {
+        padding: 14px;
+      }
+
+      .preview-stage {
+        --preview-scale: clamp(0.6, calc((100vw - 28px) / 850), 1);
+        width: 100%;
+        height: calc((297mm + 44px) * var(--preview-scale));
+        overflow: hidden;
+      }
+
+      .preview-card {
+        transform: scale(var(--preview-scale));
+        transform-origin: top center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .items-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-wrap {
+        padding: 10px;
+      }
+
+      .preview-stage {
+        --preview-scale: clamp(0.52, calc((100vw - 20px) / 850), 0.9);
+      }
+
+      textarea {
+        min-height: 130px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h1>Kelime silüeti</h1>
+      <p>Her satıra bir kelime yaz. Uygulama harflerin yukarı çıkan ve aşağı sarkan kısımlarına göre yazı kutusu/silüeti oluşturur.</p>
+
+      <label for="workMode">Çalışma türü</label>
+      <select id="workMode" onchange="toggleInputMode()">
+        <option value="words">Kelime listesi</option>
+        <option value="sentences">Cümle satırları</option>
+      </select>
+
+      <div id="wordsBlock" class="input-block">
+        <label for="words">Kelimeler</label>
+        <textarea id="words">sandalye
+kalem
+okul
+ağaç
+yaprak
+kitap
+fil
+çiçek</textarea>
+      </div>
+
+      <div id="sentencesBlock" class="input-block hidden">
+        <label for="sentences">Cümleler (her satıra bir cümle)</label>
+        <textarea id="sentences">Ali okula gitti
+Seda mavi kalemi aldı
+Küçük kedi ağacın altında uyudu</textarea>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="cellWidth">Harf genişliği</label>
+          <input id="cellWidth" type="number" value="20" min="14" max="40" />
+        </div>
+        <div>
+          <label for="heightScale">Yükseklik</label>
+          <input id="heightScale" type="number" value="0.8" min="0.6" max="1.3" step="0.1" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div id="copiesBlock">
+          <label for="copies">Tekrar sayısı</label>
+          <input id="copies" type="number" value="2" min="1" max="6" />
+        </div>
+        <div id="labelModeBlock">
+          <label for="labelMode">Kelime yazısı</label>
+          <select id="labelMode">
+            <option value="left">Solda göster</option>
+            <option value="none">Gizle</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="check">
+        <input id="showGuides" type="checkbox" checked />
+        Kılavuz çizgileri göster
+      </label>
+
+      <label class="check">
+        <input id="showLetterCuts" type="checkbox" />
+        Harf ayrımlarını hafif göster
+      </label>
+
+      <button onclick="render()">Oluştur</button>
+      <button class="secondary" onclick="printPreview()">Yazdır / PDF al</button>
+    </aside>
+
+    <main class="preview-wrap">
+      <div class="preview-stage">
+        <section class="preview-card">
+          <div class="preview-head">PDF önizleme (A4)</div>
+          <iframe id="pdfPreview" class="pdf-preview" title="PDF önizleme"></iframe>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // El yazısı/pratik öğretim için basit sınıflandırma.
+    // İsterseniz bu listeleri çocuğun öğretmeninin kullandığı harf formuna göre değiştirin.
+    const ASCENDERS = new Set(["b", "d", "f", "h", "k", "l", "t"]);
+    const DESCENDERS = new Set(["g", "ğ", "j", "p", "q", "y"]);
+    const BOTH = new Set([]); // örn. f aşağı da insin istenirse: new Set(["f"])
+
+    const TURKISH_LOWER_MAP = {
+      "I": "ı",
+      "İ": "i"
+    };
+
+    function trLower(char) {
+      return TURKISH_LOWER_MAP[char] || char.toLocaleLowerCase("tr-TR");
+    }
+
+    function letterProfile(char) {
+      const c = trLower(char);
+      if (BOTH.has(c)) return "both";
+      if (ASCENDERS.has(c)) return "asc";
+      if (DESCENDERS.has(c)) return "desc";
+      return "mid";
+    }
+
+    function xAdvance(char, cellWidth) {
+      const c = trLower(char);
+      if (c === "i" || c === "ı" || c === "l" || c === "j") return cellWidth * 0.62;
+      if (c === "m" || c === "w") return cellWidth * 1.28;
+      if (c === " " || c === "-") return cellWidth * 0.55;
+      return cellWidth;
+    }
+
+    function rectForProfile(profile, x, w, yBase, xHeight, asc, desc) {
+      if (profile === "asc") return { x, y: yBase - asc, w, h: asc };
+      if (profile === "desc") return { x, y: yBase - xHeight, w, h: xHeight + desc };
+      if (profile === "both") return { x, y: yBase - asc, w, h: asc + desc };
+      return { x, y: yBase - xHeight, w, h: xHeight };
+    }
+
+    // Komşu harf kutularının birleşiminden dış kontur üretir.
+    // Grid tabanlı çalıştığı için sandalye/kalem gibi kelimelerde basamaklı silüet verir.
+    function buildOutlinePath(rects) {
+      if (!rects.length) return "";
+
+      const items = rects.map(r => ({
+        left: r.x,
+        right: r.x + r.w,
+        top: r.y,
+        bottom: r.y + r.h
+      }));
+
+      let d = `M ${items[0].left} ${items[0].top}`;
+
+      // Üst kontur: soldan sağa. Harfler arasında sadece dış basamakları takip eder.
+      for (let i = 0; i < items.length; i++) {
+        const cur = items[i];
+        d += ` L ${cur.right} ${cur.top}`;
+
+        const next = items[i + 1];
+        if (next && next.top !== cur.top) {
+          d += ` L ${cur.right} ${next.top}`;
+        }
+      }
+
+      // En sağ kenar.
+      const last = items[items.length - 1];
+      d += ` L ${last.right} ${last.bottom}`;
+
+      // Alt kontur: sağdan sola. Böylece şekil tek parça ve içi boş/beyaz kalır.
+      for (let i = items.length - 1; i >= 0; i--) {
+        const cur = items[i];
+        d += ` L ${cur.left} ${cur.bottom}`;
+
+        const prev = items[i - 1];
+        if (prev && prev.bottom !== cur.bottom) {
+          d += ` L ${cur.left} ${prev.bottom}`;
+        }
+      }
+
+      d += " Z";
+      return d;
+    }
+
+    function makeWordSvg(word, options) {
+      const scale = options.heightScale;
+      const cellWidth = options.cellWidth;
+      const xHeight = 22 * scale;
+      const asc = 34 * scale;
+      const desc = 14 * scale;
+      const topPad = 6;
+      const leftPad = 6;
+      const rightPad = 6;
+      const bottomPad = 6;
+      const yBase = topPad + asc;
+
+      let x = leftPad;
+      const rects = [];
+      const cuts = [];
+
+      Array.from(word).forEach(char => {
+        const w = xAdvance(char, cellWidth);
+        if (char !== " " && char !== "-") {
+          const profile = letterProfile(char);
+          rects.push(rectForProfile(profile, x, w, yBase, xHeight, asc, desc));
+          cuts.push(x);
+        }
+        x += w;
+      });
+
+      const wordWidth = Math.max(0, x - leftPad);
+      const width = Math.max(100, leftPad + wordWidth + rightPad + (cellWidth * 0.55));
+      const height = topPad + asc + desc + bottomPad;
+      const outline = buildOutlinePath(rects);
+
+      const guideLines = options.showGuides ? `
+        <line class="guide" x1="0" y1="${topPad}" x2="${width}" y2="${topPad}" />
+        <line class="guide" x1="0" y1="${yBase - xHeight}" x2="${width}" y2="${yBase - xHeight}" />
+        <line class="baseline" x1="0" y1="${yBase}" x2="${width}" y2="${yBase}" />
+        <line class="guide" x1="0" y1="${yBase + desc}" x2="${width}" y2="${yBase + desc}" />
+      ` : "";
+
+      const cutLines = options.showLetterCuts ? cuts.map(cx =>
+        `<line class="letter-cut" x1="${cx}" y1="${topPad}" x2="${cx}" y2="${yBase + desc}" />`
+      ).join("\n") : "";
+
+      return `
+        <svg width="${Math.ceil(width)}" height="${Math.ceil(height)}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" aria-label="${escapeHtml(word)} silüeti">
+          ${guideLines}
+          ${cutLines}
+          <path class="silhouette" d="${outline}" />
+        </svg>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function render() {
+      const workMode = document.getElementById("workMode").value;
+      const words = document.getElementById("words").value
+        .split(/\n+/)
+        .map(w => w.trim())
+        .filter(Boolean);
+      const sentences = document.getElementById("sentences").value
+        .split(/\n+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const options = {
+        cellWidth: Number(document.getElementById("cellWidth").value) || 20,
+        heightScale: Number(document.getElementById("heightScale").value) || 0.8,
+        copies: Math.max(1, Number(document.getElementById("copies").value) || 1),
+        labelMode: document.getElementById("labelMode").value,
+        showGuides: document.getElementById("showGuides").checked,
+        showLetterCuts: document.getElementById("showLetterCuts").checked,
+      };
+
+      const content = `
+        <div class="worksheet-title">
+          <div>Ad: <span class="name-line"></span></div>
+          <div class="worksheet-topic">${workMode === "sentences" ? "Cümle silüeti çalışması" : "Kelime silüeti çalışması"}</div>
+        </div>
+      `;
+
+      let paperHtml = content;
+
+      if (workMode === "sentences") {
+        paperHtml += `<div class="sentence-stack">`;
+
+        sentences.forEach(sentence => {
+          const sentenceWords = sentence.split(/\s+/).filter(Boolean);
+          if (!sentenceWords.length) return;
+
+          paperHtml += `<div class="sentence-item">`;
+          paperHtml += `<div class="sentence-label">${escapeHtml(sentence)}</div>`;
+          paperHtml += `<div class="sentence-line">`;
+          sentenceWords.forEach(word => {
+            paperHtml += makeWordSvg(word, options);
+          });
+          paperHtml += `</div>`;
+          paperHtml += `</div>`;
+        });
+
+        paperHtml += `</div>`;
+      } else {
+        paperHtml += `<div class="items-grid">`;
+
+        words.forEach(word => {
+          for (let i = 0; i < options.copies; i++) {
+            paperHtml += `
+              <div class="item">
+              ${options.labelMode === "left" ? `<div class="word-label">${escapeHtml(word)}</div>` : ""}
+              ${makeWordSvg(word, options)}
+              </div>
+            `;
+          }
+        });
+
+        paperHtml += `</div>`;
+      }
+
+      const previewCss = document.querySelector("style").textContent;
+      const previewHtml = `
+        <!doctype html>
+        <html lang="tr">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <style>${previewCss}</style>
+          <style>
+            body { margin: 0; background: #f3f4f6; }
+            .paper { margin: 10mm auto; }
+          </style>
+        </head>
+        <body>
+          <section class="paper">${paperHtml}</section>
+        </body>
+        </html>
+      `;
+
+      const frame = document.getElementById("pdfPreview");
+      frame.srcdoc = previewHtml;
+    }
+
+    function printPreview() {
+      const frame = document.getElementById("pdfPreview");
+      if (!frame || !frame.contentWindow) return;
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    }
+
+    function toggleInputMode() {
+      const mode = document.getElementById("workMode").value;
+      const isSentenceMode = mode === "sentences";
+
+      document.getElementById("wordsBlock").classList.toggle("hidden", isSentenceMode);
+      document.getElementById("sentencesBlock").classList.toggle("hidden", !isSentenceMode);
+      document.getElementById("labelModeBlock").classList.toggle("hidden", isSentenceMode);
+      document.getElementById("copiesBlock").classList.toggle("hidden", isSentenceMode);
+    }
+
+    toggleInputMode();
+    render();
+  </script>
+</body>
+</html>
